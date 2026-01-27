@@ -1,0 +1,22 @@
+---
+import { fetchReviews } from '../lib/data_fetcher';
+import App from '../components/App.jsx';
+
+// スプレッドシートからデータを取得
+const allReviews = await fetchReviews();
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Pseudology</title>
+  </head>
+  <body class="bg-[#121212] m-0">
+    <!-- 
+      client:load を付けることで、ページ読み込み時にReactを起動します。
+      initialReviewsプロパティで、取得したデータをAppコンポーネントに渡しています。
+    -->
+    <App client:load initialReviews={allReviews} />
+  </body>
+</html>
