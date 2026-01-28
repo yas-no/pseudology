@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Home, Library, Disc, User, Menu, X, Play, Heart, MoreHorizontal, ExternalLink, Calendar, Star, ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Search, Home, Library, Disc, User, Menu, X, Play, Heart, MoreHorizontal, ExternalLink, Calendar, Star, ArrowLeft, ChevronDown, ChevronUp, Info, Database, ArrowUp } from 'lucide-react';
 
 // Headerコンポーネント
-const Header = ({ setView, activeView, onSearch, searchQuery, isVisible }) => {
+// totalReviewsを受け取り表示するように修正
+const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalReviews }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navItems = [
@@ -28,10 +29,16 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible }) => {
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div 
             onClick={() => { setView('home'); setIsSearchOpen(false); }}
-            className="flex items-center gap-2 text-white cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group"
           >
             <Disc size={24} className="text-green-500" />
-            <span className="text-lg font-bold tracking-tight">Pseudology</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-bold tracking-tight text-white leading-none">pseudology</span>
+              {/* レビュー数をシンプルに表示 */}
+              <span className="text-[10px] text-gray-500 font-mono tracking-wider group-hover:text-green-500 transition-colors">
+                {totalReviews.toLocaleString()} REVIEWS
+              </span>
+            </div>
           </div>
 
           <nav className="flex items-center gap-1 md:gap-2">
@@ -89,19 +96,6 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
 
   const dateDisplay = review.date ? review.date : "No Date";
 
-  const CardImage = ({ sizeClass, iconSize }) => (
-    <div 
-      className={`${sizeClass} relative flex items-center justify-center overflow-hidden flex-shrink-0 bg-[#333]`}
-      style={{ backgroundColor: review.image ? '#000' : review.color }}
-    >
-      {review.image ? (
-        <img src={review.image} alt={review.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-      ) : (
-        <Disc size={iconSize} className="text-white opacity-60 group-hover:scale-110 transition-transform duration-700" />
-      )}
-    </div>
-  );
-
   if (variant === "featured") return null;
 
   if (variant === "text-only" || variant === "standard") {
@@ -151,21 +145,51 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
       </div>
     );
   }
-
   return null;
 };
 
 // HomeViewコンポーネント
-const HomeView = ({ reviews, onSelectReview }) => {
-  const [pickupCount, setPickupCount] = useState(6);
-
+// App側で管理しているpickupCandidates, pickupCount, scrollYを受け取る
+const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMorePickup, initialScrollY }) => {
+  
   const recentReviews = useMemo(() => reviews.slice(0, 6), [reviews]);
-  const pickupCandidates = useMemo(() => {
-    const candidates = reviews.slice(6);
-    return [...candidates].sort(() => 0.5 - Math.random());
-  }, [reviews]);
+  
+  // 表示するピックアップ一覧
+  const visiblePickups = useMemo(() => pickupCandidates.slice(0, pickupCount), [pickupCandidates, pickupCount]);
+  
+  // スクロール復元
+  useEffect(() => {
+    if (initialScrollY > 0) {
+      window.scrollTo({ top: initialScrollY, behavior: 'instant' });
+    }
+  }, [initialScrollY]);
 
-  const visiblePickups = pickupCandidates.slice(0, pickupCount);
+  // 無限スクロール用
+  const observerTarget = useRef(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+            // 表示数が候補数より少ない場合のみ追加ロード
+            if (visiblePickups.length < pickupCandidates.length) {
+                onMorePickup();
+            }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [visiblePickups, pickupCandidates, onMorePickup]);
+
 
   return (
     <div className="space-y-12 pb-24">
@@ -200,14 +224,10 @@ const HomeView = ({ reviews, onSelectReview }) => {
           ))}
         </div>
 
+        {/* 無限スクロール用の監視ターゲット (透明なdiv) */}
         {visiblePickups.length < pickupCandidates.length && (
-          <div className="mt-12 flex justify-center">
-            <button 
-              onClick={() => setPickupCount(prev => prev + 6)}
-              className="px-8 py-3 bg-[#1a1a1a] hover:bg-[#282828] text-white text-xs font-bold tracking-widest rounded-full border border-gray-700 hover:border-green-500 transition-all shadow-lg hover:shadow-green-500/20"
-            >
-              LOAD MORE
-            </button>
+          <div ref={observerTarget} className="h-10 w-full flex justify-center items-center mt-8">
+            <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
       </section>
@@ -269,43 +289,42 @@ const DetailView = ({ review, onBack }) => {
 };
 
 // AboutViewコンポーネント
-const AboutView = () => {
+const AboutView = ({ siteDescription, profileDescription }) => {
   return (
     <div className="animate-fade-in pb-20 pt-8 px-4 max-w-2xl mx-auto">
       <div className="mb-12 text-center">
         <Disc size={64} className="text-green-500 mx-auto mb-6" />
-        <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">About Pseudology</h1>
-        <p className="text-gray-400 text-lg">A personal archive of music reviews and thoughts.</p>
+        <h1 className="text-4xl font-bold text-white mb-8 tracking-tight">
+          <span className="text-2xl font-normal opacity-70 mr-2">About</span>
+          pseudology
+        </h1>
+        
+        <div className="border border-gray-800 bg-[#181818] p-4 rounded text-[10px] text-gray-500 font-serif text-left inline-block max-w-full">
+           <p className="mb-2 border-b border-gray-800 pb-2">
+             <span className="font-bold text-gray-400">pseudology n.</span> The study of lying; the art or science of lying. <span className="opacity-50">/ From: A Dictionary of Psychology | Date: 2001 | Author: ANDREW M. COLMAN</span>
+           </p>
+           <p>
+             <span className="font-bold text-gray-400">pseudology n.</span> Falsehood of speech. <span className="opacity-50">/ Source: Webster's Revised Unabridged Dictionary (1913)</span>
+           </p>
+        </div>
       </div>
 
       <div className="space-y-12">
         <section>
           <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-800 pb-2">このサイトについて</h2>
-          <div className="text-gray-300 leading-relaxed space-y-4">
-            <p>
-              Pseudologyは、管理人が日々の生活の中で触れた音楽作品についてのレビューや感想を記録するアーカイブサイトです。
-              主にX（旧Twitter）に投稿した短文のレビューを蓄積し、検索・閲覧しやすい形で整理することを目的としています。
-            </p>
-            <p>
-              新旧問わず、ジャンルも多岐にわたる音楽を紹介しています。
-              8,000件を超える膨大なデータベースの中から、あなたの琴線に触れる一枚が見つかれば幸いです。
-            </p>
+          <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+            {siteDescription}
           </div>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-800 pb-2">著者について</h2>
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-24 h-24 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center">
-               <User size={40} className="text-gray-400" />
-            </div>
+          <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-800 pb-2">プロフィール</h2>
+          <div className="flex flex-col gap-4">
             <div>
-              <h3 className="text-xl font-bold text-white mb-2">Yas No</h3>
-              <p className="text-gray-300 leading-relaxed mb-4">
-                音楽愛好家 / Webデベロッパー。
-                UKロック、エレクトロニカ、アンビエントなどを好んで聴きます。
-                日々の発見を記録として残すことに喜びを感じています。
-              </p>
+              <h3 className="text-xl font-bold text-white mb-2">yas-no</h3>
+              <div className="text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
+                {profileDescription}
+              </div>
               <a 
                 href="https://x.com/yas_no" 
                 target="_blank" 
@@ -342,7 +361,6 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
     const groups = {}; 
     
     reviews.forEach(r => { 
-      // アーティスト名が大文字統一されている前提
       const sortName = getSortName(r.artist);
       let initial = sortName.charAt(0).toUpperCase();
       if (!/[A-Z]/.test(initial)) {
@@ -429,7 +447,6 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
                   
                   {expandedArtist === artist.name && (
                     <div className="bg-[#222] border-t border-gray-800 p-2 animate-fade-in">
-                      {/* 画像なし、テキストのみのコンパクトなリスト表示 */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
                         {artist.reviews.map((review) => (
                           <div 
@@ -491,12 +508,10 @@ const SearchView = ({ reviews, onSelectReview, query = "" }) => {
   );
 };
 
-// メインAppコンポーネント
-export default function App({ initialReviews }) {
+export default function App({ initialReviews, aboutData }) {
   const [view, setView] = useState("home");
   const [selectedReview, setSelectedReview] = useState(null);
   
-  // データを読み込む際に、アーティスト名をすべて大文字に変換して統一する
   const [reviews, setReviews] = useState(
     (initialReviews || []).map(review => ({
       ...review,
@@ -512,6 +527,17 @@ export default function App({ initialReviews }) {
   
   const [expandedArtistName, setExpandedArtistName] = useState(null);
   const [libraryScrollPos, setLibraryScrollPos] = useState(0);
+  
+  // ホームの状態
+  const [homeScrollPos, setHomeScrollPos] = useState(0);
+  const [pickupCount, setPickupCount] = useState(6);
+  
+  const pickupCandidates = useMemo(() => {
+    const candidates = reviews.slice(6);
+    return [...candidates].sort(() => 0.5 - Math.random());
+  }, [reviews]);
+  
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -523,17 +549,31 @@ export default function App({ initialReviews }) {
       } else {
         setIsHeaderVisible(true);
       }
+      
+      if (currentScrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+      
       setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+  
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleSelectReview = (review) => { 
     if (view === "library") {
       setLibraryScrollPos(window.scrollY);
+    } else if (view === "home") {
+      setHomeScrollPos(window.scrollY);
     }
+
     setPreviousView(view);
     setSelectedReview(review); 
     setView("detail"); 
@@ -564,14 +604,24 @@ export default function App({ initialReviews }) {
         activeView={view} 
         onSearch={handleSearch}
         searchQuery={searchQuery}
-        isVisible={isHeaderVisible} 
+        isVisible={isHeaderVisible}
+        totalReviews={reviews.length} 
       />
 
       <main 
          className="pt-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto min-h-screen"
          style={{ background: bgGradient }}
       >
-        {view === "home" && <HomeView reviews={reviews} onSelectReview={handleSelectReview} />}
+        {view === "home" && (
+          <HomeView 
+            reviews={reviews} 
+            onSelectReview={handleSelectReview} 
+            pickupCandidates={pickupCandidates}
+            pickupCount={pickupCount}
+            onMorePickup={() => setPickupCount(prev => prev + 6)}
+            initialScrollY={homeScrollPos}
+          />
+        )}
         {view === "search" && <SearchView reviews={reviews} onSelectReview={handleSelectReview} query={searchQuery} />}
         {view === "library" && (
           <ArtistListView 
@@ -583,9 +633,21 @@ export default function App({ initialReviews }) {
             initialScrollY={libraryScrollPos}
           />
         )}
-        {view === "about" && <AboutView />}
+        {view === "about" && (
+          <AboutView 
+            siteDescription={aboutData ? aboutData.siteDescription : "Loading..."}
+            profileDescription={aboutData ? aboutData.profileDescription : "Loading..."}
+          />
+        )}
         {view === "detail" && selectedReview && <DetailView review={selectedReview} onBack={handleBack} />}
       </main>
+      
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-8 right-8 bg-green-500 text-black p-3 rounded-full shadow-lg hover:bg-green-400 transition-all duration-300 z-50 ${showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}
+      >
+        <ArrowUp size={24} />
+      </button>
     </div>
   );
 }

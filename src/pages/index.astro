@@ -1,9 +1,13 @@
 ---
-import { fetchReviews } from '../lib/data_fetcher';
+// データ取得関数をインポート
+import { fetchReviews, fetchAboutData } from '../lib/data_fetcher';
 import App from '../components/App.jsx';
 
-// スプレッドシートからデータを取得
+// スプレッドシートからレビューデータを取得
 const allReviews = await fetchReviews();
+
+// GoogleドキュメントからAboutデータを取得
+const aboutData = await fetchAboutData();
 ---
 
 <html lang="ja">
@@ -13,10 +17,7 @@ const allReviews = await fetchReviews();
     <title>Pseudology</title>
   </head>
   <body class="bg-[#121212] m-0">
-    <!-- 
-      client:load を付けることで、ページ読み込み時にReactを起動します。
-      initialReviewsプロパティで、取得したデータをAppコンポーネントに渡しています。
-    -->
-    <App client:load initialReviews={allReviews} />
+    <!-- レビューデータとAboutデータをReactコンポーネントに渡す -->
+    <App client:load initialReviews={allReviews} aboutData={aboutData} />
   </body>
 </html>
