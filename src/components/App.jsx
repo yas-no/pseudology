@@ -89,6 +89,19 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
 
   const dateDisplay = review.date ? review.date : "No Date";
 
+  const CardImage = ({ sizeClass, iconSize }) => (
+    <div 
+      className={`${sizeClass} relative flex items-center justify-center overflow-hidden flex-shrink-0 bg-[#333]`}
+      style={{ backgroundColor: review.image ? '#000' : review.color }}
+    >
+      {review.image ? (
+        <img src={review.image} alt={review.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+      ) : (
+        <Disc size={iconSize} className="text-white opacity-60 group-hover:scale-110 transition-transform duration-700" />
+      )}
+    </div>
+  );
+
   if (variant === "featured") return null;
 
   if (variant === "text-only" || variant === "standard") {
@@ -138,6 +151,7 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
       </div>
     );
   }
+
   return null;
 };
 
@@ -328,6 +342,7 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
     const groups = {}; 
     
     reviews.forEach(r => { 
+      // アーティスト名が大文字統一されている前提
       const sortName = getSortName(r.artist);
       let initial = sortName.charAt(0).toUpperCase();
       if (!/[A-Z]/.test(initial)) {
@@ -414,6 +429,7 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
                   
                   {expandedArtist === artist.name && (
                     <div className="bg-[#222] border-t border-gray-800 p-2 animate-fade-in">
+                      {/* 画像なし、テキストのみのコンパクトなリスト表示 */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
                         {artist.reviews.map((review) => (
                           <div 
@@ -480,7 +496,13 @@ export default function App({ initialReviews }) {
   const [view, setView] = useState("home");
   const [selectedReview, setSelectedReview] = useState(null);
   
-  const [reviews, setReviews] = useState(initialReviews || []); 
+  // データを読み込む際に、アーティスト名をすべて大文字に変換して統一する
+  const [reviews, setReviews] = useState(
+    (initialReviews || []).map(review => ({
+      ...review,
+      artist: review.artist ? review.artist.toUpperCase() : "" 
+    }))
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [previousView, setPreviousView] = useState("home");
