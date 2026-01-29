@@ -31,7 +31,7 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalRe
             onClick={() => { setView('home'); setIsSearchOpen(false); }}
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group"
           >
-            <Disc size={24} className="text-green-500" />
+            {/* アイコン削除 */}
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-bold tracking-tight text-white leading-none">pseudology</span>
               {/* レビュー数をシンプルに表示 */}
@@ -293,7 +293,7 @@ const AboutView = ({ siteDescription, profileDescription }) => {
   return (
     <div className="animate-fade-in pb-20 pt-8 px-4 max-w-2xl mx-auto">
       <div className="mb-12 text-center">
-        <Disc size={64} className="text-green-500 mx-auto mb-6" />
+        {/* アイコン削除 */}
         <h1 className="text-4xl font-bold text-white mb-8 tracking-tight">
           <span className="text-2xl font-normal opacity-70 mr-2">About</span>
           pseudology
