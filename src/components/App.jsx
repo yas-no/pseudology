@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Home, Library, Disc, User, Menu, X, Play, Heart, MoreHorizontal, ExternalLink, Calendar, Star, ArrowLeft, ChevronDown, ChevronUp, Info, Database, ArrowUp } from 'lucide-react';
+import { Search, Library, Info, X, ExternalLink, ArrowLeft, ChevronDown, ChevronUp, ArrowUp } from 'lucide-react';
 
-// Headerコンポーネント
-// totalReviewsを受け取り表示するように修正
-const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalReviews }) => {
+// --- 1. Header Component ---
+const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchMode, setSearchMode, onResetHistory, onLogoClick }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navItems = [
@@ -16,9 +15,21 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalRe
     if (item.id === 'search-trigger') {
       setIsSearchOpen(true);
     } else {
+      // ナビゲーション移動時は履歴をリセットする
+      onResetHistory();
       setView(item.id);
       setIsSearchOpen(false);
     }
+  };
+
+  const handleLogoClick = () => {
+    if (onLogoClick) {
+      onLogoClick();
+    } else {
+      onResetHistory();
+      setView('home');
+    }
+    setIsSearchOpen(false);
   };
 
   return (
@@ -28,17 +39,10 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalRe
       >
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div 
-            onClick={() => { setView('home'); setIsSearchOpen(false); }}
+            onClick={handleLogoClick}
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group"
           >
-            {/* アイコン削除 */}
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold tracking-tight text-white leading-none">pseudology</span>
-              {/* レビュー数をシンプルに表示 */}
-              <span className="text-[10px] text-gray-500 font-mono tracking-wider group-hover:text-green-500 transition-colors">
-                {totalReviews.toLocaleString()} REVIEWS
-              </span>
-            </div>
+            <span className="text-lg font-bold tracking-tight text-white leading-none">pseudology</span>
           </div>
 
           <nav className="flex items-center gap-1 md:gap-2">
@@ -62,21 +66,37 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalRe
           absolute top-16 left-0 right-0 bg-[#121212] border-b border-white/10 p-4 transition-all duration-300 overflow-hidden
           ${isSearchOpen ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}
         `}>
-          <div className="max-w-2xl mx-auto relative flex items-center gap-4">
-             <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+          <div className="max-w-2xl mx-auto relative flex items-center gap-2">
+             <div className="relative flex-1 flex items-center bg-[#242424] rounded-full border border-gray-800 focus-within:ring-2 focus-within:ring-green-500/50 focus-within:border-transparent transition-all overflow-hidden">
+                <div className="pl-4 pr-2 text-gray-500">
+                   <Search size={20} />
+                </div>
+                
+                <select 
+                  value={searchMode}
+                  onChange={(e) => setSearchMode(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-3 pr-2"
+                >
+                  <option value="all" className="bg-[#242424] text-white">全文</option>
+                  <option value="artist" className="bg-[#242424] text-white">アーティスト</option>
+                  <option value="title" className="bg-[#242424] text-white">作品名</option>
+                </select>
+
+                <div className="h-5 w-px bg-gray-700 mx-1"></div>
+
                 <input 
                   type="text"
-                  placeholder="アーティスト、曲名、レビュー内容で検索..."
-                  className="w-full pl-12 pr-4 py-3 rounded-full bg-[#242424] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:bg-[#2a2a2a] transition-all border border-gray-800"
+                  placeholder="キーワードを入力..."
+                  className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none py-3 px-2 w-full"
                   value={searchQuery}
                   onChange={(e) => onSearch(e.target.value)}
                   autoFocus={isSearchOpen}
                 />
              </div>
+
              <button 
                onClick={() => setIsSearchOpen(false)}
-               className="p-2 rounded-full hover:bg-[#282828] text-gray-400 hover:text-white transition-colors"
+               className="p-2 rounded-full hover:bg-[#282828] text-gray-400 hover:text-white transition-colors flex-shrink-0"
              >
                <X size={24} />
              </button>
@@ -87,7 +107,7 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, totalRe
   );
 };
 
-// ReviewCardコンポーネント
+// --- 2. ReviewCard Component ---
 const ReviewCard = ({ review, onClick, variant = "standard" }) => {
   const commonContainerStyle = `
     cursor-pointer group bg-[#1a1a1a] hover:bg-[#222] transition-all duration-300 
@@ -148,29 +168,22 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
   return null;
 };
 
-// HomeViewコンポーネント
-// App側で管理しているpickupCandidates, pickupCount, scrollYを受け取る
-const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMorePickup, initialScrollY }) => {
-  
+// --- 3. HomeView Component ---
+const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMorePickup, initialScrollY, totalReviews, lastUpdate }) => {
   const recentReviews = useMemo(() => reviews.slice(0, 6), [reviews]);
-  
-  // 表示するピックアップ一覧
   const visiblePickups = useMemo(() => pickupCandidates.slice(0, pickupCount), [pickupCandidates, pickupCount]);
   
-  // スクロール復元
   useEffect(() => {
     if (initialScrollY > 0) {
       window.scrollTo({ top: initialScrollY, behavior: 'instant' });
     }
   }, [initialScrollY]);
 
-  // 無限スクロール用
   const observerTarget = useRef(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-            // 表示数が候補数より少ない場合のみ追加ロード
             if (visiblePickups.length < pickupCandidates.length) {
                 onMorePickup();
             }
@@ -190,10 +203,18 @@ const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMo
     };
   }, [visiblePickups, pickupCandidates, onMorePickup]);
 
-
   return (
     <div className="space-y-12 pb-24">
-      <section className="mt-8"> 
+      <div className="mt-6 flex items-center justify-between border-b border-gray-800 pb-2 mb-8">
+         <span className="text-xs font-mono tracking-widest text-green-500 font-bold">
+            {totalReviews.toLocaleString()} REVIEWS
+         </span>
+         <span className="text-[10px] font-mono tracking-widest text-gray-500">
+            UPDATE : {lastUpdate}
+         </span>
+      </div>
+
+      <section> 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {recentReviews.map(review => (
             <ReviewCard key={review.id} review={review} onClick={onSelectReview} variant="standard" />
@@ -224,7 +245,6 @@ const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMo
           ))}
         </div>
 
-        {/* 無限スクロール用の監視ターゲット (透明なdiv) */}
         {visiblePickups.length < pickupCandidates.length && (
           <div ref={observerTarget} className="h-10 w-full flex justify-center items-center mt-8">
             <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
@@ -235,10 +255,65 @@ const HomeView = ({ reviews, onSelectReview, pickupCandidates, pickupCount, onMo
   );
 };
 
-// DetailViewコンポーネント
-const DetailView = ({ review, onBack }) => {
+// --- 4. DetailView Component ---
+const DetailView = ({ review, onBack, reviews, onSelectReview }) => {
   if (!review) return null;
   const dateDisplay = review.date ? review.date : "No Date";
+  
+  const [visibleCount, setVisibleCount] = useState(6);
+
+  // レビューが変わったら表示数をリセット
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [review]);
+
+  const relatedReviews = useMemo(() => {
+    if (!review || !reviews) return [];
+    
+    const artistName = review.artist.toLowerCase();
+    
+    // 1. アーティスト名一致 (自分自身は除く)
+    const byArtist = reviews.filter(r => 
+      r.id !== review.id && r.artist.toLowerCase() === artistName
+    );
+  
+    // 2. 全文検索
+    const byContent = reviews.filter(r => 
+      r.id !== review.id && 
+      !byArtist.some(a => a.id === r.id) && 
+      (r.title.toLowerCase().includes(artistName) || r.body.toLowerCase().includes(artistName))
+    );
+  
+    return [...byArtist, ...byContent];
+  }, [review, reviews]);
+
+  const visibleRelatedReviews = useMemo(() => {
+    return relatedReviews.slice(0, visibleCount);
+  }, [relatedReviews, visibleCount]);
+
+  const observerTarget = useRef(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+            if (visibleCount < relatedReviews.length) {
+                setVisibleCount(prev => prev + 6);
+            }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [visibleCount, relatedReviews.length]);
 
   return (
     <div className="animate-fade-in pb-20">
@@ -270,30 +345,46 @@ const DetailView = ({ review, onBack }) => {
           {review.body}
         </div>
         
-        <div className="flex justify-end text-sm text-gray-500 mb-12 border-t border-gray-800 pt-4">
-            <span>
-                {dateDisplay}
-            </span>
+        <div className="flex justify-between items-center border-t border-gray-800 pt-4 mb-16">
+          <button 
+            onClick={onBack} 
+            className="text-sm font-bold text-gray-400 hover:text-white border border-gray-600 px-6 py-2 rounded-full hover:border-white transition-all uppercase tracking-widest flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            BACK
+          </button>
+
+          <span className="text-sm text-gray-500">
+             {dateDisplay}
+          </span>
         </div>
 
-        <button 
-          onClick={onBack} 
-          className="text-sm font-bold text-gray-400 hover:text-white border border-gray-600 px-8 py-3 rounded-full hover:border-white transition-all uppercase tracking-widest flex items-center gap-2"
-        >
-          <ArrowLeft size={16} />
-          BACK
-        </button>
+        {visibleRelatedReviews.length > 0 && (
+            <div className="mb-20">
+                <h3 className="text-xl font-bold text-white mb-6 border-b border-gray-800 pb-2">Related Reviews</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {visibleRelatedReviews.map(r => (
+                        <ReviewCard key={r.id} review={r} onClick={onSelectReview} variant="text-only" /> 
+                    ))}
+                </div>
+
+                {visibleCount < relatedReviews.length && (
+                  <div ref={observerTarget} className="h-10 w-full flex justify-center items-center mt-8">
+                    <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+            </div>
+        )}
       </div>
     </div>
   );
 };
 
-// AboutViewコンポーネント
+// --- 5. AboutView Component ---
 const AboutView = ({ siteDescription, profileDescription }) => {
   return (
     <div className="animate-fade-in pb-20 pt-8 px-4 max-w-2xl mx-auto">
       <div className="mb-12 text-center">
-        {/* アイコン削除 */}
         <h1 className="text-4xl font-bold text-white mb-8 tracking-tight">
           <span className="text-2xl font-normal opacity-70 mr-2">About</span>
           pseudology
@@ -311,18 +402,18 @@ const AboutView = ({ siteDescription, profileDescription }) => {
 
       <div className="space-y-12">
         <section>
-          <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-800 pb-2">このサイトについて</h2>
-          <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+          <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-800 pb-2">このサイトについて</h2>
+          <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
             {siteDescription}
           </div>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-800 pb-2">プロフィール</h2>
+          <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-800 pb-2">プロフィール</h2>
           <div className="flex flex-col gap-4">
             <div>
-              <h3 className="text-xl font-bold text-white mb-2">yas-no</h3>
-              <div className="text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
+              <h3 className="text-lg font-bold text-white mb-2">yas-no</h3>
+              <div className="text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
                 {profileDescription}
               </div>
               <a 
@@ -341,9 +432,8 @@ const AboutView = ({ siteDescription, profileDescription }) => {
   );
 };
 
-// ArtistListViewコンポーネント
+// --- 6. ArtistListView Component ---
 const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArtist, onToggleArtist, initialScrollY }) => {
-  
   useEffect(() => {
     if (initialScrollY > 0) {
       window.scrollTo({
@@ -473,18 +563,33 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
   );
 };
 
-const SearchView = ({ reviews, onSelectReview, query = "" }) => {
+// --- 7. SearchView Component ---
+const SearchView = ({ reviews, onSelectReview, query = "", searchMode = "all" }) => {
   const filtered = useMemo(() => {
     if (!query) return [];
     const lower = query.toLowerCase();
-    return reviews.filter(r => r.artist.toLowerCase().includes(lower) || r.title.toLowerCase().includes(lower) || r.body.toLowerCase().includes(lower));
-  }, [query, reviews]);
+    
+    return reviews.filter(r => {
+      if (searchMode === 'artist') {
+        return r.artist.toLowerCase().includes(lower);
+      } else if (searchMode === 'title') {
+        return r.title.toLowerCase().includes(lower);
+      } else {
+        return r.artist.toLowerCase().includes(lower) || 
+               r.title.toLowerCase().includes(lower) || 
+               r.body.toLowerCase().includes(lower);
+      }
+    });
+  }, [query, reviews, searchMode]);
 
   return (
     <div className="min-h-screen">
       <div className="pt-8">
         {query ? (
-          <div className="mb-8 text-gray-400 text-sm">"{query}" の検索結果: {filtered.length} 件</div>
+          <div className="mb-8 text-gray-400 text-sm">
+            <span className="mr-2 text-green-500 font-bold">[{searchMode === 'all' ? '全文' : searchMode === 'artist' ? 'アーティスト' : '作品名'}]</span>
+            "{query}" の検索結果: {filtered.length} 件
+          </div>
         ) : (
           <div className="py-20 text-center text-gray-500">
              <Search size={48} className="mx-auto mb-4 opacity-50"/>
@@ -508,10 +613,14 @@ const SearchView = ({ reviews, onSelectReview, query = "" }) => {
   );
 };
 
+// --- 8. Main App Component ---
 export default function App({ initialReviews, aboutData }) {
   const [view, setView] = useState("home");
   const [selectedReview, setSelectedReview] = useState(null);
   
+  // 履歴スタック: 画面遷移の履歴を保持する
+  const [historyStack, setHistoryStack] = useState([]);
+
   const [reviews, setReviews] = useState(
     (initialReviews || []).map(review => ({
       ...review,
@@ -520,15 +629,13 @@ export default function App({ initialReviews, aboutData }) {
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [previousView, setPreviousView] = useState("home");
-  
+  const [searchMode, setSearchMode] = useState("all");
+
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
   const [expandedArtistName, setExpandedArtistName] = useState(null);
   const [libraryScrollPos, setLibraryScrollPos] = useState(0);
-  
-  // ホームの状態
   const [homeScrollPos, setHomeScrollPos] = useState(0);
   const [pickupCount, setPickupCount] = useState(6);
   
@@ -538,6 +645,13 @@ export default function App({ initialReviews, aboutData }) {
   }, [reviews]);
   
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const lastUpdate = useMemo(() => {
+    if (reviews.length > 0 && reviews[0].date) {
+      return reviews[0].date;
+    }
+    return "No Data";
+  }, [reviews]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -567,31 +681,84 @@ export default function App({ initialReviews, aboutData }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /**
+   * ロゴクリック時の処理（強制的にトップへ戻る）
+   */
+  const handleHeaderLogoClick = () => {
+    setHistoryStack([]);
+    setSelectedReview(null);
+    setHomeScrollPos(0); // スクロール位置をリセット
+    setView("home");
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  /**
+   * レビュー選択時の処理（履歴スタックへの追加）
+   */
   const handleSelectReview = (review) => { 
+    // 現在の画面の状態を履歴スタックに保存
+    const currentHistoryState = {
+      view,
+      selectedReview,
+      // 各画面のスクロール位置なども必要であればここで保存
+    };
+
+    // ホームやライブラリの場合はスクロール位置を別途保存（元のロジック維持）
     if (view === "library") {
       setLibraryScrollPos(window.scrollY);
     } else if (view === "home") {
       setHomeScrollPos(window.scrollY);
     }
 
-    setPreviousView(view);
+    setHistoryStack(prev => [...prev, currentHistoryState]);
+
     setSelectedReview(review); 
     setView("detail"); 
     window.scrollTo(0, 0); 
   };
   
+  /**
+   * BACKボタン押下時の処理（履歴スタックからの復元）
+   */
   const handleBack = () => { 
-    setSelectedReview(null); 
-    setView(previousView || "home");
+    if (historyStack.length === 0) {
+      // 履歴がない場合は安全策としてホームに戻る
+      setView("home");
+      setSelectedReview(null);
+      return;
+    }
+
+    // 最新の履歴を取り出す
+    const prevNav = historyStack[historyStack.length - 1];
+    const newStack = historyStack.slice(0, -1);
+    
+    setHistoryStack(newStack);
+    setView(prevNav.view);
+    setSelectedReview(prevNav.selectedReview);
+    
+    // スクロール位置の復元などの処理が必要ならここに追加
+  };
+
+  /**
+   * メニュークリック時などの履歴リセット用
+   */
+  const handleResetHistory = () => {
+    setHistoryStack([]);
+    setSelectedReview(null);
   };
   
   const handleSearch = (q) => {
     setSearchQuery(q);
     if (q) {
-      if (view !== "search") setPreviousView(view);
+      if (view !== "search") {
+         // 検索画面に行くときも、現在の画面を履歴に残す？
+         // 今回は検索は別モードとして扱い、履歴はリセットしないが、
+         // BACKで戻れるようにスタックには積まない（簡易実装）
+         // 必要ならここでも setHistoryStack すれば戻れるようになります。
+         // 今回は単純化のため、検索バーからの遷移は履歴管理外とします。
+      }
       setView("search");
       setSelectedReview(null);
-    } else if (!q && view === 'search') {
     }
   };
 
@@ -605,12 +772,15 @@ export default function App({ initialReviews, aboutData }) {
         onSearch={handleSearch}
         searchQuery={searchQuery}
         isVisible={isHeaderVisible}
-        totalReviews={reviews.length} 
+        searchMode={searchMode}
+        setSearchMode={setSearchMode}
+        onResetHistory={handleResetHistory}
+        onLogoClick={handleHeaderLogoClick}
       />
 
       <main 
-         className="pt-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto min-h-screen"
-         style={{ background: bgGradient }}
+          className="pt-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto min-h-screen"
+          style={{ background: bgGradient }}
       >
         {view === "home" && (
           <HomeView 
@@ -620,9 +790,18 @@ export default function App({ initialReviews, aboutData }) {
             pickupCount={pickupCount}
             onMorePickup={() => setPickupCount(prev => prev + 6)}
             initialScrollY={homeScrollPos}
+            totalReviews={reviews.length}
+            lastUpdate={lastUpdate}
           />
         )}
-        {view === "search" && <SearchView reviews={reviews} onSelectReview={handleSelectReview} query={searchQuery} />}
+        {view === "search" && (
+          <SearchView 
+            reviews={reviews} 
+            onSelectReview={handleSelectReview} 
+            query={searchQuery}
+            searchMode={searchMode}
+          />
+        )}
         {view === "library" && (
           <ArtistListView 
             reviews={reviews} 
@@ -639,7 +818,14 @@ export default function App({ initialReviews, aboutData }) {
             profileDescription={aboutData ? aboutData.profileDescription : "Loading..."}
           />
         )}
-        {view === "detail" && selectedReview && <DetailView review={selectedReview} onBack={handleBack} />}
+        {view === "detail" && selectedReview && (
+            <DetailView 
+                review={selectedReview} 
+                onBack={handleBack} 
+                reviews={reviews} 
+                onSelectReview={handleSelectReview}
+            />
+        )}
       </main>
       
       <button
