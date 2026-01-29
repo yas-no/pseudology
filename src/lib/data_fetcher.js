@@ -1,7 +1,7 @@
 import Papa from 'papaparse';
 
 // CDレビュー用：Googleスプレッドシートの公開URL
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaV1KLDYy4e1Y_2h6oo79s2D7a6XNHy4M278FFu8Qup5QtW6ZitzDffYabxm2a8owPofqzVbM0Xi95/pub?output=csv';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaV1KLDYy4e1Y_2h6oo79s2D7a6XNHy4M278FFu8Qup5QtW6ZitzDffYabxm2a8owPofqzVbM0Xi95/pub?gid=0&single=true&output=csv';
 
 // Aboutページ用：GoogleドキュメントのID
 const ABOUT_DOC_ID = '1CKRsItDhxKZtdam84d5sPFXCuxrhgptAg0f63Y5ULLk';
