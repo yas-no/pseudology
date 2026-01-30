@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Library, Info, X, ExternalLink, ArrowLeft, ChevronDown, ChevronUp, ArrowUp } from 'lucide-react';
+import { Search, Library, Info, X, ExternalLink, ArrowLeft, ChevronDown, ChevronUp, ArrowUp, Trophy, Crown, Disc } from 'lucide-react';
+
+// --- Logo Component (Option 1: Standard Minimal) ---
+const Logo = ({ className = "h-6 w-auto fill-current" }) => (
+  <svg viewBox="0 0 200 40" className={className}>
+    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="sans-serif" letterSpacing="-1">pseudology</text>
+  </svg>
+);
 
 // --- 1. Header Component ---
 const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchMode, setSearchMode, onResetHistory, onLogoClick }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // 修正: メニューの並び順を変更 (BestをAboutの前に移動)
   const navItems = [
     { id: 'search-trigger', label: '検索', icon: Search },
     { id: 'library', label: 'アーティスト一覧', icon: Library },
+    { id: 'best', label: '年間BEST', icon: Crown },
     { id: 'about', label: 'About', icon: Info },
   ];
 
@@ -15,7 +24,6 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
     if (item.id === 'search-trigger') {
       setIsSearchOpen(true);
     } else {
-      // ナビゲーション移動時は履歴をリセットする
       onResetHistory();
       setView(item.id);
       setIsSearchOpen(false);
@@ -40,9 +48,10 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div 
             onClick={handleLogoClick}
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group"
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group text-white"
           >
-            <span className="text-lg font-bold tracking-tight text-white leading-none">pseudology</span>
+            {/* Logo Option 1 を適用 (サイズを h-6 から h-8 に拡大) */}
+            <Logo className="h-8 w-auto fill-current" />
           </div>
 
           <nav className="flex items-center gap-1 md:gap-2">
@@ -108,7 +117,7 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
 };
 
 // --- 2. ReviewCard Component ---
-const ReviewCard = ({ review, onClick, variant = "standard" }) => {
+const ReviewCard = ({ review, onClick, variant = "standard", rank = null }) => {
   const commonContainerStyle = `
     cursor-pointer group bg-[#1a1a1a] hover:bg-[#222] transition-all duration-300 
     border-l-4 border-transparent hover:border-green-500 rounded-r-lg relative overflow-hidden
@@ -116,11 +125,101 @@ const ReviewCard = ({ review, onClick, variant = "standard" }) => {
 
   const dateDisplay = review.date ? review.date : "No Date";
 
+  // ランキング表示用のバッジ
+  // 修正: サイズを小さく、目立たないように調整
+  const RankBadge = () => {
+    if (!rank) return null;
+    const isTop3 = rank <= 3;
+    const badgeColors = {
+        1: "text-yellow-400",
+        2: "text-gray-300",
+        3: "text-amber-600",
+        default: "text-gray-600" // 目立たない色に変更
+    };
+    const colorClass = isTop3 ? badgeColors[rank] : badgeColors.default;
+
+    return (
+        <div className="absolute top-3 right-3 flex items-center justify-center pointer-events-none z-10 opacity-50 group-hover:opacity-100 transition-opacity">
+            {rank === 1 && <Crown size={14} className="text-yellow-500 mr-1" fill="currentColor" />}
+            <span className={`text-xl font-black italic tracking-tighter ${colorClass}`}>
+                {rank}
+            </span>
+        </div>
+    );
+  };
+
   if (variant === "featured") return null;
 
+  // Best View (ランキング) 用のカードスタイル
+  if (variant === "best") {
+      const hasImage = !!review.image;
+      
+      // 該当レビューがない場合のフォールバック表示
+      if (review.isFallback) {
+        return (
+            <div className={`${commonContainerStyle} flex flex-col h-full opacity-60`}>
+                <RankBadge />
+                {/* 修正: justify-center を justify-start に変更して上揃えにする */}
+                <div className="p-5 flex-grow flex flex-col justify-start">
+                    <p className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">{review.artist}</p>
+                    <h3 className="text-lg font-bold text-white mb-2">{review.title}</h3>
+                    <p className="text-xs text-red-400 font-mono">※レビュー記事はまだありません</p>
+                </div>
+            </div>
+        );
+      }
+
+      // 修正: 通常のレビューカード(standard)と同じデザイン・サイズ感にする
+      // 画像がない場合は画像枠を削除する
+      return (
+        <div 
+          onClick={() => onClick(review)}
+          className={`${commonContainerStyle} flex flex-col h-full`}
+        >
+          <RankBadge />
+          {hasImage ? (
+            <>
+              <div className="flex items-start p-4 pb-2 gap-4">
+                <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden shadow-lg group-hover:scale-105 transition-transform bg-black">
+                  <img src={review.image} alt={review.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="min-w-0 flex flex-col justify-center h-12">
+                  <p className="text-xs text-gray-500 truncate font-bold uppercase tracking-wider mb-0.5">{review.artist}</p>
+                  <h3 className="text-lg text-white font-bold truncate leading-tight group-hover:text-green-400 transition-colors">{review.title}</h3>
+                </div>
+              </div>
+              <div className="p-4 pt-2 flex-grow">
+                <p className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap line-clamp-4 opacity-90 group-hover:opacity-100">
+                  {review.body}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="p-5 pb-2 flex-grow">
+                <div className="mb-3">
+                  <p className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider truncate">{review.artist}</p>
+                  <h3 className="text-lg font-bold text-white group-hover:text-green-400 transition-colors leading-snug line-clamp-1">
+                    {review.title}
+                  </h3>
+                </div>
+                <p className="text-gray-400 text-xs leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity line-clamp-4">
+                  {review.body}
+                </p>
+              </div>
+            </>
+          )}
+
+          <div className={`flex justify-between items-center mt-auto ${hasImage ? 'px-4 pb-3' : 'px-5 pb-3'}`}>
+            <span className="text-[10px] text-gray-600 ml-auto">{dateDisplay}</span>
+          </div>
+        </div>
+      );
+  }
+
+  // --- 既存の表示ロジック ---
   if (variant === "text-only" || variant === "standard") {
     const hasImage = !!review.image;
-
     return (
       <div 
         onClick={() => onClick(review)}
@@ -262,7 +361,6 @@ const DetailView = ({ review, onBack, reviews, onSelectReview }) => {
   
   const [visibleCount, setVisibleCount] = useState(6);
 
-  // レビューが変わったら表示数をリセット
   useEffect(() => {
     setVisibleCount(6);
   }, [review]);
@@ -385,10 +483,11 @@ const AboutView = ({ siteDescription, profileDescription }) => {
   return (
     <div className="animate-fade-in pb-20 pt-8 px-4 max-w-2xl mx-auto">
       <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold text-white mb-8 tracking-tight">
-          <span className="text-2xl font-normal opacity-70 mr-2">About</span>
-          pseudology
-        </h1>
+        {/* Logo Option 1 を適用 (修正: Aboutテキストを追加し、サイズ調整) */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+            <span className="text-2xl font-normal text-white opacity-70">About</span>
+            <Logo className="h-8 w-auto fill-current text-white" />
+        </div>
         
         <div className="border border-gray-800 bg-[#181818] p-4 rounded text-[10px] text-gray-500 font-serif text-left inline-block max-w-full">
            <p className="mb-2 border-b border-gray-800 pb-2">
@@ -613,8 +712,159 @@ const SearchView = ({ reviews, onSelectReview, query = "", searchMode = "all" })
   );
 };
 
-// --- 8. Main App Component ---
-export default function App({ initialReviews, aboutData }) {
+// --- 【新規追加】 8. BestView Component ---
+// 修正: isHeaderVisible プロップを受け取る
+const BestView = ({ bestData, reviews, onSelectReview, isHeaderVisible }) => {
+  // 存在する年度のリストを作成し、降順（新しい順）にソート
+  const availableYears = useMemo(() => {
+    if (!bestData || bestData.length === 0) return [];
+    const years = [...new Set(bestData.map(d => d.year))];
+    // 最新の年度を左にするため、降順ソート
+    return years.sort((a, b) => parseInt(b) - parseInt(a));
+  }, [bestData]);
+
+  // デフォルトで最新の年度を選択
+  const [selectedYear, setSelectedYear] = useState(availableYears[0]);
+
+  useEffect(() => {
+    if (availableYears.length > 0 && !selectedYear) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
+
+  // 選択された年度のデータを抽出
+  const currentYearData = useMemo(() => {
+    if (!selectedYear) return { comment: "", items: [] };
+    
+    // rank=0 は総評コメント
+    const commentData = bestData.find(d => d.year == selectedYear && d.rank === 0);
+    // rank=1〜10 はランキング
+    const rankingData = bestData.filter(d => d.year == selectedYear && d.rank > 0).sort((a, b) => a.rank - b.rank);
+
+    return {
+      comment: commentData ? commentData.comment : "",
+      items: rankingData
+    };
+  }, [bestData, selectedYear]);
+
+  // ランキングアイテムと実際のレビューデータを結合する
+  const matchedRanking = useMemo(() => {
+    return currentYearData.items.map(item => {
+      // マッチングロジック
+      // 1. アーティスト名と作品名で検索（大文字小文字無視）
+      const candidates = reviews.filter(r => 
+        r.artist.toLowerCase() === item.artist.toLowerCase() &&
+        r.title.toLowerCase() === item.title.toLowerCase()
+      );
+
+      // 2. 候補の中からベストな1つを選ぶ
+      let matchedReview = null;
+      if (candidates.length > 0) {
+        // ソート順: 日付あり > 日付が新しい > 本文が長い
+        candidates.sort((a, b) => {
+          // 日付の有無
+          if (a.date && !b.date) return -1;
+          if (!a.date && b.date) return 1;
+          // 日付の比較（新しい順）
+          if (a.date && b.date) {
+             const dateA = new Date(a.date);
+             const dateB = new Date(b.date);
+             if (dateA > dateB) return -1;
+             if (dateA < dateB) return 1;
+          }
+          // 本文の長さ（長い順）
+          return b.body.length - a.body.length;
+        });
+        matchedReview = candidates[0];
+      }
+
+      // レビューが見つかった場合はそのデータを、見つからない場合はフォールバックデータを作成
+      if (matchedReview) {
+        return { ...matchedReview, rank: item.rank, isFallback: false };
+      } else {
+        return {
+          id: `best-${selectedYear}-${item.rank}`, // ダミーID
+          artist: item.artist,
+          title: item.title,
+          body: "レビュー記事はまだありません",
+          image: null, // 画像なし
+          date: null,
+          color: "#333", // ダミーカラー
+          rank: item.rank,
+          isFallback: true
+        };
+      }
+    });
+  }, [currentYearData, reviews, selectedYear]);
+
+  if (availableYears.length === 0) {
+      return (
+          <div className="py-20 text-center text-gray-500 animate-fade-in">
+              {/* 修正: アイコンをCrownに変更 */}
+              <Crown size={48} className="mx-auto mb-4 opacity-50"/>
+              <p>ランキングデータがまだありません。</p>
+          </div>
+      );
+  }
+
+  return (
+    <div className="animate-fade-in pb-20">
+      <div className="flex flex-col items-center mt-10 mb-6"> {/* マージン調整 */}
+        {/* 修正: アイコンをCrownに変更し、見出しを「年間BEST」に変更。上にスペースを空ける。 */}
+        <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+          <Crown className="text-yellow-500" size={32} />
+          <span className="text-2xl">年間BEST</span>
+        </h1>
+      </div>
+
+      {/* 修正: 年選択メニューを横スクロールスライダーに変更 */}
+      <div className={`sticky ${isHeaderVisible ? 'top-16' : 'top-0'} transition-[top] duration-300 z-20 bg-[#121212]/95 backdrop-blur border-b border-gray-800 py-3 mb-8 overflow-x-auto scrollbar-hide w-full`}>
+        <div className="flex px-4 space-x-2 min-w-max sm:justify-center">
+            {availableYears.map(year => (
+                <button
+                    key={year}
+                    onClick={() => setSelectedYear(year)}
+                    className={`
+                        px-4 py-1.5 rounded-full text-sm font-bold transition-all border whitespace-nowrap
+                        ${selectedYear === year 
+                            ? 'bg-white text-black border-white' 
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'}
+                    `}
+                >
+                    {year}
+                </button>
+            ))}
+        </div>
+      </div>
+
+      {/* ランキングリスト: グリッドレイアウトに変更 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mb-12">
+          {matchedRanking.map(item => (
+              <ReviewCard 
+                key={`${selectedYear}-${item.rank}`} 
+                review={item} 
+                onClick={item.isFallback ? () => {} : onSelectReview} 
+                variant="best"
+                rank={item.rank}
+              />
+          ))}
+      </div>
+
+      {/* 総評コメント: 幅を合わせ、左揃えに変更 */}
+      {currentYearData.comment && (
+          <div className="w-full p-6 bg-[#181818] rounded-xl border border-gray-800 text-left">
+              <h2 className="text-sm font-bold text-green-500 mb-3 tracking-widest uppercase">OVERVIEW of {selectedYear}</h2>
+              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                  {currentYearData.comment}
+              </p>
+          </div>
+      )}
+    </div>
+  );
+};
+
+// --- 9. Main App Component ---
+export default function App({ initialReviews, aboutData, annualRanks }) {
   const [view, setView] = useState("home");
   const [selectedReview, setSelectedReview] = useState(null);
   
@@ -627,6 +877,9 @@ export default function App({ initialReviews, aboutData }) {
       artist: review.artist ? review.artist.toUpperCase() : "" 
     }))
   );
+  
+  // 年間ベストデータのState
+  const [bestData, setBestData] = useState(annualRanks || []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState("all");
@@ -751,11 +1004,7 @@ export default function App({ initialReviews, aboutData }) {
     setSearchQuery(q);
     if (q) {
       if (view !== "search") {
-         // 検索画面に行くときも、現在の画面を履歴に残す？
-         // 今回は検索は別モードとして扱い、履歴はリセットしないが、
-         // BACKで戻れるようにスタックには積まない（簡易実装）
-         // 必要ならここでも setHistoryStack すれば戻れるようになります。
-         // 今回は単純化のため、検索バーからの遷移は履歴管理外とします。
+         // 検索画面に行くときも、現在の画面を履歴に残す
       }
       setView("search");
       setSelectedReview(null);
@@ -816,6 +1065,14 @@ export default function App({ initialReviews, aboutData }) {
           <AboutView 
             siteDescription={aboutData ? aboutData.siteDescription : "Loading..."}
             profileDescription={aboutData ? aboutData.profileDescription : "Loading..."}
+          />
+        )}
+        {view === "best" && (
+          <BestView 
+            bestData={bestData}
+            reviews={reviews}
+            onSelectReview={handleSelectReview}
+            isHeaderVisible={isHeaderVisible}
           />
         )}
         {view === "detail" && selectedReview && (

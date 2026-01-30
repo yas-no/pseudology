@@ -1,6 +1,6 @@
 ---
 // データ取得関数をインポート
-import { fetchReviews, fetchAboutData } from '../lib/data_fetcher';
+import { fetchReviews, fetchAboutData, fetchAnnualRanks } from '../lib/data_fetcher';
 import App from '../components/App.jsx';
 
 // スプレッドシートからレビューデータを取得
@@ -8,6 +8,9 @@ const allReviews = await fetchReviews();
 
 // GoogleドキュメントからAboutデータを取得
 const aboutData = await fetchAboutData();
+
+// 【新規追加】スプレッドシートから年間ベストデータを取得
+const annualRanks = await fetchAnnualRanks();
 ---
 
 <html lang="ja">
@@ -17,7 +20,7 @@ const aboutData = await fetchAboutData();
     <title>Pseudology</title>
   </head>
   <body class="bg-[#121212] m-0">
-    <!-- レビューデータとAboutデータをReactコンポーネントに渡す -->
-    <App client:load initialReviews={allReviews} aboutData={aboutData} />
+    <!-- レビューデータ、Aboutデータ、年間ベストデータをReactコンポーネントに渡す -->
+    <App client:load initialReviews={allReviews} aboutData={aboutData} annualRanks={annualRanks} />
   </body>
 </html>

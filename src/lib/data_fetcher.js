@@ -3,6 +3,9 @@ import Papa from 'papaparse';
 // CDレビュー用：Googleスプレッドシートの公開URL
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaV1KLDYy4e1Y_2h6oo79s2D7a6XNHy4M278FFu8Qup5QtW6ZitzDffYabxm2a8owPofqzVbM0Xi95/pub?gid=0&single=true&output=csv';
 
+// 【重要】ここに取得した「annual_ranks」シートのCSV URLを貼り付けてください
+const ANNUAL_RANKS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTaV1KLDYy4e1Y_2h6oo79s2D7a6XNHy4M278FFu8Qup5QtW6ZitzDffYabxm2a8owPofqzVbM0Xi95/pub?gid=473900344&single=true&output=csv'; 
+
 // Aboutページ用：GoogleドキュメントのID
 const ABOUT_DOC_ID = '1CKRsItDhxKZtdam84d5sPFXCuxrhgptAg0f63Y5ULLk';
 const ABOUT_TXT_URL = `https://docs.google.com/document/d/${ABOUT_DOC_ID}/export?format=txt`;
@@ -47,44 +50,102 @@ export async function fetchReviews() {
   }
 }
 
+// 【新規追加】年間ベストデータを取得する関数 (修正版: ヘッダーなし対応)
+export async function fetchAnnualRanks() {
+  console.log("fetchAnnualRanks: 開始");
+  try {
+    // URL設定チェック
+    if (!ANNUAL_RANKS_CSV_URL || ANNUAL_RANKS_CSV_URL.includes('ここに')) {
+        console.warn("fetchAnnualRanks Warning: CSV URLが設定されていないか、初期値のままです。");
+        return [];
+    }
+
+    const response = await fetch(ANNUAL_RANKS_CSV_URL);
+    
+    // レスポンスチェック
+    if (!response.ok) {
+        console.error(`fetchAnnualRanks Error: ネットワークレスポンスが不正です (${response.status})`);
+        return [];
+    }
+
+    const csvText = await response.text();
+    console.log("fetchAnnualRanks: CSVテキスト取得成功 (先頭100文字):", csvText.substring(0, 100));
+
+    // 変更点: header: false にして、配列インデックスでアクセスするように変更
+    const parsed = Papa.parse(csvText, {
+      header: false, 
+      skipEmptyLines: true,
+    });
+
+    if (parsed.errors && parsed.errors.length > 0) {
+        console.error("fetchAnnualRanks Error: CSVパースエラー", parsed.errors);
+    }
+
+    console.log(`fetchAnnualRanks: パース完了。取得件数: ${parsed.data.length}`);
+
+    // データを整形して返す
+    const formattedData = parsed.data
+      .map((row, i) => {
+        // もし1行目に「year」などのヘッダー文字が含まれていた場合はスキップ
+        if (i === 0 && (row[0] === 'year' || row[0] === '年度')) {
+            return null;
+        }
+
+        // 列の定義: [0]:year, [1]:rank, [2]:artist, [3]:title, [4]:comment
+        const year = row[0];
+        const rank = row[1];
+
+        // 必須フィールドのチェック
+        if (!year || rank === undefined || rank === '') {
+            console.warn(`fetchAnnualRanks Warning: データ不足の行があります (index: ${i})`, row);
+            return null;
+        }
+
+        return {
+          year: year.toString(),
+          rank: parseInt(rank, 10), // 数値に変換
+          artist: row[2] ? row[2].trim() : "",
+          title: row[3] ? row[3].trim() : "",
+          comment: row[4] || ""
+        };
+      })
+      .filter(item => item !== null); // 無効な行を除外
+
+    console.log("fetchAnnualRanks: データ整形完了", formattedData);
+    return formattedData;
+
+  } catch (error) {
+    console.error("fetchAnnualRanks Fatal Error: 年間ベストデータの取得に失敗しました:", error);
+    return [];
+  }
+}
+
 // Aboutページのデータを取得する関数
 export async function fetchAboutData() {
   try {
     const response = await fetch(ABOUT_TXT_URL);
     const rawText = await response.text();
     
-    // デバッグ用: 取得したテキストの先頭100文字をコンソールに出す
-    console.log("Fetched About Text Preview:", rawText.substring(0, 100));
-
     // BOM (Byte Order Mark) がある場合は削除
     const text = rawText.replace(/^\uFEFF/, '');
 
     // セクション分割のロジックを強化
-    // 正規表現で分割を試みる
     let sections = text.split(/## Section \d+:[^\n]*\r?\n/);
 
-    // もし分割できていなければ（配列が1つだけなら）、キーワードでの単純分割を試みる
     if (sections.length < 3) {
-       // "## Section" という文字で無理やり分ける
        const roughParts = text.split('## Section');
        if (roughParts.length >= 3) {
-          // 各パーツの1行目（タイトル部分）を削除して本文にする
           sections = roughParts.map(part => {
              const lines = part.split('\n');
-             lines.shift(); // 1行目を捨てる
+             lines.shift(); 
              return lines.join('\n');
           });
        }
     }
 
-    // データ抽出
-    // splitの結果、sections[0]はヘッダー前の文章なので無視、[1]がSection 1、[2]がSection 2
-    let siteDescription = sections[1] ? sections[1].trim() : "読み込みエラー: '## Section 1' が見つかりませんでした。Googleドキュメントの記述形式を確認してください。";
-    let profileDescription = sections[2] ? sections[2].trim() : "読み込みエラー: '## Section 2' が見つかりませんでした。Googleドキュメントの記述形式を確認してください。";
+    let siteDescription = sections[1] ? sections[1].trim() : "読み込みエラー";
+    let profileDescription = sections[2] ? sections[2].trim() : "読み込みエラー";
 
-    // Googleドキュメントでの「改行」を、WEB上での「改段落（空行を入れる）」として扱うための処理
-    // 通常の改行コード(\n)を、2連続の改行コード(\n\n)に置換します。
-    // これにより、CSSの whitespace-pre-wrap が効いている環境で、行間に余白が生まれます。
     siteDescription = siteDescription.replace(/\n/g, '\n\n');
     profileDescription = profileDescription.replace(/\n/g, '\n\n');
 
