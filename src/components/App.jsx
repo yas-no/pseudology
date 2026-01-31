@@ -80,7 +80,6 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
           absolute top-16 left-0 right-0 bg-[#121212] border-b border-white/10 p-4 transition-all duration-300 overflow-hidden
           ${isSearchOpen ? 'max-h-24 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'}
         `}>
-          {/* 修正: pointer-events-none を追加して、閉じている時に誤タップを防ぐ */}
           <div className="max-w-2xl mx-auto relative flex items-center gap-2">
              <div className="relative flex-1 flex items-center bg-[#242424] rounded-full border border-gray-800 focus-within:ring-2 focus-within:ring-green-500/50 focus-within:border-transparent transition-all overflow-hidden">
                 <div className="pl-4 pr-2 text-gray-500">
@@ -628,11 +627,11 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
                 <div key={artist.name} className="group bg-[#181818] rounded-lg overflow-hidden border-l-4 border-transparent hover:border-l-green-500 transition-all">
                   <button 
                     onClick={() => onToggleArtist(artist.name)}
-                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-[#282828] transition-colors text-left"
+                    className="w-full px-5 py-3 flex items-center justify-between hover:bg-[#282828] transition-colors text-left"
                   >
-                    <span className="text-white font-bold text-lg md:text-xl tracking-tight group-hover:text-green-500 transition-colors">{artist.name}</span>
+                    <span className="text-white font-bold text-base md:text-lg tracking-tight group-hover:text-green-500 transition-colors">{artist.name}</span>
                     <div className="text-gray-500">
-                      {expandedArtist === artist.name ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                      {expandedArtist === artist.name ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                   </button>
                   
@@ -646,7 +645,8 @@ const ArtistListView = ({ reviews, onSelectReview, isHeaderVisible, expandedArti
                             className="px-3 py-2 rounded-md hover:bg-[#333] cursor-pointer transition-colors group/item border border-transparent hover:border-gray-600 flex items-center"
                           >
                             <div className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover/item:bg-green-500 mr-3 transition-colors flex-shrink-0"></div>
-                            <span className="text-sm font-medium text-gray-300 group-hover/item:text-green-400 transition-colors line-clamp-1">
+                            {/* 修正: font-medium を削除 (font-normalへ) */}
+                            <span className="text-sm text-gray-300 group-hover/item:text-green-400 transition-colors line-clamp-1">
                               {review.title}
                             </span>
                           </div>
