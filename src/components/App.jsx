@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Library, Info, X, ExternalLink, ArrowLeft, ChevronDown, ChevronUp, ArrowUp, Trophy, Crown, Disc } from 'lucide-react';
 
-// --- Logo Component (Option 1: Standard Minimal) ---
+// --- Logo Component (Option 1: Standard Minimal with Libre Franklin) ---
+// 採用案: Libre Franklinフォントを使用
 const Logo = ({ className = "h-6 w-auto fill-current" }) => (
   <svg viewBox="0 0 200 40" className={className}>
-    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="sans-serif" letterSpacing="-1">pseudology</text>
+    <defs>
+      <style>
+        {`@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@700&display=swap');`}
+      </style>
+    </defs>
+    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="'Libre Franklin', sans-serif" letterSpacing="-1">pseudology</text>
   </svg>
 );
 
@@ -12,7 +18,6 @@ const Logo = ({ className = "h-6 w-auto fill-current" }) => (
 const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchMode, setSearchMode, onResetHistory, onLogoClick }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // 修正: メニューの並び順を変更 (BestをAboutの前に移動)
   const navItems = [
     { id: 'search-trigger', label: '検索', icon: Search },
     { id: 'library', label: 'アーティスト一覧', icon: Library },
@@ -50,7 +55,7 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
             onClick={handleLogoClick}
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group text-white"
           >
-            {/* Logo Option 1 を適用 (サイズを h-6 から h-8 に拡大) */}
+            {/* Logo (Libre Franklin) を適用 */}
             <Logo className="h-8 w-auto fill-current" />
           </div>
 
@@ -73,8 +78,9 @@ const Header = ({ setView, activeView, onSearch, searchQuery, isVisible, searchM
         
         <div className={`
           absolute top-16 left-0 right-0 bg-[#121212] border-b border-white/10 p-4 transition-all duration-300 overflow-hidden
-          ${isSearchOpen ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}
+          ${isSearchOpen ? 'max-h-24 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'}
         `}>
+          {/* 修正: pointer-events-none を追加して、閉じている時に誤タップを防ぐ */}
           <div className="max-w-2xl mx-auto relative flex items-center gap-2">
              <div className="relative flex-1 flex items-center bg-[#242424] rounded-full border border-gray-800 focus-within:ring-2 focus-within:ring-green-500/50 focus-within:border-transparent transition-all overflow-hidden">
                 <div className="pl-4 pr-2 text-gray-500">
@@ -126,7 +132,6 @@ const ReviewCard = ({ review, onClick, variant = "standard", rank = null }) => {
   const dateDisplay = review.date ? review.date : "No Date";
 
   // ランキング表示用のバッジ
-  // 修正: サイズを小さく、目立たないように調整
   const RankBadge = () => {
     if (!rank) return null;
     const isTop3 = rank <= 3;
@@ -134,7 +139,7 @@ const ReviewCard = ({ review, onClick, variant = "standard", rank = null }) => {
         1: "text-yellow-400",
         2: "text-gray-300",
         3: "text-amber-600",
-        default: "text-gray-600" // 目立たない色に変更
+        default: "text-gray-600"
     };
     const colorClass = isTop3 ? badgeColors[rank] : badgeColors.default;
 
@@ -159,7 +164,6 @@ const ReviewCard = ({ review, onClick, variant = "standard", rank = null }) => {
         return (
             <div className={`${commonContainerStyle} flex flex-col h-full opacity-60`}>
                 <RankBadge />
-                {/* 修正: justify-center を justify-start に変更して上揃えにする */}
                 <div className="p-5 flex-grow flex flex-col justify-start">
                     <p className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">{review.artist}</p>
                     <h3 className="text-lg font-bold text-white mb-2">{review.title}</h3>
@@ -169,8 +173,6 @@ const ReviewCard = ({ review, onClick, variant = "standard", rank = null }) => {
         );
       }
 
-      // 修正: 通常のレビューカード(standard)と同じデザイン・サイズ感にする
-      // 画像がない場合は画像枠を削除する
       return (
         <div 
           onClick={() => onClick(review)}
@@ -483,7 +485,7 @@ const AboutView = ({ siteDescription, profileDescription }) => {
   return (
     <div className="animate-fade-in pb-20 pt-8 px-4 max-w-2xl mx-auto">
       <div className="mb-12 text-center">
-        {/* Logo Option 1 を適用 (修正: Aboutテキストを追加し、サイズ調整) */}
+        {/* Logo Option 1 を適用 (Aboutテキストを追加し、サイズ調整) */}
         <div className="flex items-center justify-center gap-3 mb-8">
             <span className="text-2xl font-normal text-white opacity-70">About</span>
             <Logo className="h-8 w-auto fill-current text-white" />

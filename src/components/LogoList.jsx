@@ -1,73 +1,107 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-// --- Logo 1: Standard ---
-const Logo1 = () => (
+// --- Font Loading & Styles ---
+const FontStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700&family=Karla:wght@700&family=Libre+Franklin:wght@700&display=swap');
+  `}</style>
+);
+
+// --- Logo 1: Libre Franklin (Loop-tail g default) ---
+const LogoLibreFranklin = () => (
   <svg viewBox="0 0 200 40" className="h-16 w-auto fill-current">
-    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="sans-serif" letterSpacing="-1">pseudology</text>
+    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="'Libre Franklin', sans-serif" letterSpacing="-1">pseudology</text>
   </svg>
 );
 
-// --- Logo 2: Modern ---
-const Logo2 = () => (
+// --- Logo 2: Karla (Quirky sans-serif) ---
+const LogoKarla = () => (
   <svg viewBox="0 0 200 40" className="h-16 w-auto fill-current">
-    <circle cx="15" cy="20" r="10" />
-    <rect x="22" y="10" width="4" height="20" />
-    <text x="35" y="30" fontSize="28" fontWeight="bold" fontFamily="sans-serif" letterSpacing="-1">seudology</text>
+    <text x="0" y="30" fontSize="28" fontWeight="bold" fontFamily="'Karla', sans-serif" letterSpacing="-1.5">pseudology</text>
   </svg>
 );
 
-// --- Logo 3: Digital ---
-const Logo3 = () => (
+// --- Logo 3: Inter (With Settings) ---
+// Interは標準ではシングルストーリーgですが、font-feature-settingsで変形を試みます。
+// ※Interにループテイルgの機能が含まれていない場合は標準のまま表示されます。
+const LogoInter = () => (
   <svg viewBox="0 0 200 40" className="h-16 w-auto fill-current">
-    <text x="0" y="30" fontSize="26" fontWeight="bold" fontFamily="monospace" letterSpacing="-2">pseudology_</text>
-  </svg>
-);
-
-// --- Logo 4: Flow ---
-const Logo4 = () => (
-  <svg viewBox="0 0 200 40" className="h-16 w-auto fill-current">
-    <path d="M0 25 Q 10 10, 20 25 T 40 25" fill="none" stroke="currentColor" strokeWidth="2.5" />
-    <text x="50" y="30" fontSize="26" fontWeight="bold" fontFamily="sans-serif">pseudology</text>
-  </svg>
-);
-
-// --- Logo 5: Bold ---
-const Logo5 = () => (
-  <svg viewBox="0 0 240 40" className="h-16 w-auto fill-current">
-    <rect x="0" y="5" width="24" height="24" rx="4" fill="currentColor"/>
-    <path d="M12 10 L12 24 M7 12 L17 12" stroke="#121212" strokeWidth="2" />
-    <text x="32" y="30" fontSize="24" fontWeight="900" fontFamily="sans-serif" letterSpacing="2" style={{textTransform: 'uppercase'}}>PSEUDOLOGY</text>
+    <text 
+      x="0" y="30" 
+      fontSize="28" 
+      fontWeight="bold" 
+      fontFamily="'Inter', sans-serif" 
+      letterSpacing="-1"
+      // ここでOpenType機能を有効化（cv05など）。
+      // Interに眼鏡型gのオプションがあればここで反映されますが、
+      // 多くのバージョンでは提供されていません。
+      style={{ fontFeatureSettings: '"cv05" 1, "calt" 1' }} 
+    >
+      pseudology
+    </text>
   </svg>
 );
 
 export default function LogoList() {
-  const logos = [
-    { id: 1, Component: Logo1, title: "Standard Minimal", desc: "最もシンプルで可読性が高い" },
-    { id: 2, Component: Logo2, title: "Modern Geometric", desc: "幾何学的なアイコン付き" },
-    { id: 3, Component: Logo3, title: "Digital Monospace", desc: "テック・デジタルな雰囲気" },
-    { id: 4, Component: Logo4, title: "Sound Wave", desc: "音の波形をイメージ" },
-    { id: 5, Component: Logo5, title: "Bold Box", desc: "力強いボックスロゴ" },
+  const [selected, setSelected] = useState(null);
+
+  const logoOptions = [
+    { 
+      id: 1, 
+      Component: LogoLibreFranklin, 
+      title: "Libre Franklin", 
+      desc: "【推奨】標準で美しいループテイル（眼鏡型）の 'g' を持つ、伝統的かつモダンなサンセリフ体。" 
+    },
+    { 
+      id: 2, 
+      Component: LogoKarla, 
+      title: "Karla", 
+      desc: "少し人間味のあるグロテスク・サンセリフ。'g' はループなしですが個性的で人気があります。" 
+    },
+    { 
+      id: 3, 
+      Component: LogoInter, 
+      title: "Inter (Custom)", 
+      desc: "UIフォントの定番。標準はループなしの 'g' です。（設定変更を適用中）" 
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#121212] text-white p-8 font-sans">
+      <FontStyles />
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2 text-center">Logo Concepts</h1>
-        <p className="text-gray-500 text-center mb-12">気に入ったデザインの番号（1〜5）を選んでください</p>
+        <h1 className="text-3xl font-bold mb-2 text-center text-white">Logo Font Comparison</h1>
+        <p className="text-gray-500 text-center mb-12">小文字 'g' の形状に注目して選んでください</p>
         
         <div className="space-y-6">
-          {logos.map(({ id, Component, title, desc }) => (
-            <div key={id} className="flex flex-col md:flex-row items-center gap-6 p-6 bg-[#1a1a1a] rounded-xl border border-gray-800 hover:border-gray-600 transition-colors">
+          {logoOptions.map(({ id, Component, title, desc }) => (
+            <div 
+              key={id} 
+              onClick={() => setSelected(id)}
+              className={`flex flex-col md:flex-row items-center gap-6 p-6 rounded-xl border transition-all cursor-pointer
+                ${selected === id 
+                  ? 'bg-[#222] border-green-500 shadow-lg shadow-green-900/20' 
+                  : 'bg-[#1a1a1a] border-gray-800 hover:border-gray-600 hover:shadow-lg'
+                }`}
+            >
               <div className="flex-1 text-center md:text-left">
-                <span className="text-green-500 text-xs font-bold tracking-widest uppercase">Option {id}</span>
-                <h2 className="text-xl font-bold">{title}</h2>
-                <p className="text-sm text-gray-500">{desc}</p>
+                <span className={`text-xs font-bold tracking-widest uppercase transition-colors ${selected === id ? 'text-green-400' : 'text-gray-600'}`}>
+                  Option 0{id}
+                </span>
+                <h2 className="text-2xl font-bold mb-2">{title}</h2>
+                <p className="text-sm text-gray-400">{desc}</p>
               </div>
-              <div className="flex-1 flex justify-center p-4 bg-black/50 rounded-lg">
-                <Component />
+              <div className="flex-[1.5] flex justify-center p-8 bg-[#121212] rounded-lg border border-gray-800">
+                <div className={`${selected === id ? 'text-green-400' : 'text-white'}`}>
+                  <Component />
+                </div>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-12 text-center text-sm text-gray-500">
+          <p>気に入ったフォントがあれば、その番号（1〜3）をお知らせください。<br/>本番サイトに適用します。</p>
         </div>
       </div>
     </div>
