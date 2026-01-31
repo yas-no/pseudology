@@ -716,7 +716,8 @@ const SearchView = ({ reviews, onSelectReview, query = "", searchMode = "all" })
 
 // --- 【新規追加】 8. BestView Component ---
 // 修正: isHeaderVisible プロップを受け取る
-const BestView = ({ bestData, reviews, onSelectReview, isHeaderVisible }) => {
+// 修正: selectedYear と setSelectedYear を親から受け取る（状態のリフトアップ）
+const BestView = ({ bestData, reviews, onSelectReview, isHeaderVisible, selectedYear, setSelectedYear }) => {
   // 存在する年度のリストを作成し、降順（新しい順）にソート
   const availableYears = useMemo(() => {
     if (!bestData || bestData.length === 0) return [];
@@ -725,20 +726,19 @@ const BestView = ({ bestData, reviews, onSelectReview, isHeaderVisible }) => {
     return years.sort((a, b) => parseInt(b) - parseInt(a));
   }, [bestData]);
 
-  // デフォルトで最新の年度を選択
-  const [selectedYear, setSelectedYear] = useState(availableYears[0]);
-
+  // データがロードされたら最新年度をデフォルト選択（まだ選択されていない場合のみ）
   useEffect(() => {
     if (availableYears.length > 0 && !selectedYear) {
       setSelectedYear(availableYears[0]);
     }
-  }, [availableYears, selectedYear]);
+  }, [availableYears, selectedYear, setSelectedYear]);
 
   // 選択された年度のデータを抽出
   const currentYearData = useMemo(() => {
     if (!selectedYear) return { comment: "", items: [] };
     
     // rank=0 は総評コメント
+    // 注意: JSONデータの型によっては文字列比較が必要になるため == を使用
     const commentData = bestData.find(d => d.year == selectedYear && d.rank === 0);
     // rank=1〜10 はランキング
     const rankingData = bestData.filter(d => d.year == selectedYear && d.rank > 0).sort((a, b) => a.rank - b.rank);
@@ -828,7 +828,7 @@ const BestView = ({ bestData, reviews, onSelectReview, isHeaderVisible }) => {
                     onClick={() => setSelectedYear(year)}
                     className={`
                         px-4 py-1.5 rounded-full text-sm font-bold transition-all border whitespace-nowrap
-                        ${selectedYear === year 
+                        ${selectedYear == year 
                             ? 'bg-white text-black border-white' 
                             : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'}
                     `}
@@ -882,6 +882,9 @@ export default function App({ initialReviews, aboutData, annualRanks }) {
   
   // 年間ベストデータのState
   const [bestData, setBestData] = useState(annualRanks || []);
+  
+  // 修正: 年間ベストの選択年度を保持するState
+  const [currentBestYear, setCurrentBestYear] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState("all");
@@ -1075,6 +1078,8 @@ export default function App({ initialReviews, aboutData, annualRanks }) {
             reviews={reviews}
             onSelectReview={handleSelectReview}
             isHeaderVisible={isHeaderVisible}
+            selectedYear={currentBestYear}
+            setSelectedYear={setCurrentBestYear}
           />
         )}
         {view === "detail" && selectedReview && (

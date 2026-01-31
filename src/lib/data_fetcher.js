@@ -50,13 +50,11 @@ export async function fetchReviews() {
   }
 }
 
-// 【新規追加】年間ベストデータを取得する関数 (修正版: ヘッダーなし対応)
+// 【新規追加】年間ベストデータを取得する関数 (ログ削除版)
 export async function fetchAnnualRanks() {
-  console.log("fetchAnnualRanks: 開始");
   try {
     // URL設定チェック
     if (!ANNUAL_RANKS_CSV_URL || ANNUAL_RANKS_CSV_URL.includes('ここに')) {
-        console.warn("fetchAnnualRanks Warning: CSV URLが設定されていないか、初期値のままです。");
         return [];
     }
 
@@ -64,24 +62,16 @@ export async function fetchAnnualRanks() {
     
     // レスポンスチェック
     if (!response.ok) {
-        console.error(`fetchAnnualRanks Error: ネットワークレスポンスが不正です (${response.status})`);
         return [];
     }
 
     const csvText = await response.text();
-    console.log("fetchAnnualRanks: CSVテキスト取得成功 (先頭100文字):", csvText.substring(0, 100));
 
-    // 変更点: header: false にして、配列インデックスでアクセスするように変更
+    // header: false にして、配列インデックスでアクセスするように変更
     const parsed = Papa.parse(csvText, {
       header: false, 
       skipEmptyLines: true,
     });
-
-    if (parsed.errors && parsed.errors.length > 0) {
-        console.error("fetchAnnualRanks Error: CSVパースエラー", parsed.errors);
-    }
-
-    console.log(`fetchAnnualRanks: パース完了。取得件数: ${parsed.data.length}`);
 
     // データを整形して返す
     const formattedData = parsed.data
@@ -97,7 +87,6 @@ export async function fetchAnnualRanks() {
 
         // 必須フィールドのチェック
         if (!year || rank === undefined || rank === '') {
-            console.warn(`fetchAnnualRanks Warning: データ不足の行があります (index: ${i})`, row);
             return null;
         }
 
@@ -111,11 +100,10 @@ export async function fetchAnnualRanks() {
       })
       .filter(item => item !== null); // 無効な行を除外
 
-    console.log("fetchAnnualRanks: データ整形完了", formattedData);
     return formattedData;
 
   } catch (error) {
-    console.error("fetchAnnualRanks Fatal Error: 年間ベストデータの取得に失敗しました:", error);
+    console.error("年間ベストデータの取得に失敗しました:", error);
     return [];
   }
 }
